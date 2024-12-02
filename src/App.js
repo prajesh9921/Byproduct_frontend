@@ -9,7 +9,7 @@ const FileUploader = ({ onFileUpload }) => {
     formData.append('file', file);
 
     try {
-      const response = await axios.post('http://localhost:5000/api/upload', formData);
+      const response = await axios.post('https://growthpartners-backend.onrender.com/api/upload', formData);
       onFileUpload(response.data);
     } catch (error) {
       console.error('File upload error', error);
@@ -64,7 +64,7 @@ const App = () => {
 
     try {
       // Call backend API to get AI response
-      const response = await axios.post('http://localhost:5000/api/chat', { 
+      const response = await axios.post('https://growthpartners-backend.onrender.com/api/chat', { 
         message: newMessages,
         financialContext: data.data
       });
