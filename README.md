@@ -1,7 +1,7 @@
 # Frontend
 
 ### Deployed Website
-The project is deployed and accessible at: [Deployed Website URL](https://your-deployed-site.com)
+The project is deployed and accessible at: [Deployed Website URL]([https://your-deployed-site.com](https://chatapptaskopenai.netlify.app))
 
 ---
 
