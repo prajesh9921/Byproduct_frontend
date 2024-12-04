@@ -1,239 +1,279 @@
-import React, { useState, useCallback } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+// import QRCode from 'qrcode.react';
+import {QRCodeSVG} from 'qrcode.react';
 
-// File Upload Component
-const FileUploader = ({ onFileUpload }) => {
-  const handleFileChange = async (event) => {
-    const file = event.target.files[0];
-    const formData = new FormData();
-    formData.append('file', file);
+// Admin Components
+const AdminDashboard = () => {
+  const [menuItems, setMenuItems] = useState([]);
+  const [orders, setOrders] = useState([]);
+  const [newItem, setNewItem] = useState({
+    name: '',
+    description: '',
+    price: ''
+  });
 
-    try {
-      const response = await axios.post('https://growthpartners-backend.onrender.com/api/upload', formData);
-      onFileUpload(response.data);
-    } catch (error) {
-      console.error('File upload error', error);
-    }
-  };
-
-  return (
-    <div className="mb-4">
-      <input 
-        type="file" 
-        accept=".xlsx" 
-        onChange={handleFileChange} 
-        className="w-full p-2 border rounded"
-      />
-    </div>
-  );
-};
-
-// Message Bubble Component
-const MessageBubble = ({ message, type }) => {
-  const baseStyles = 'p-3 rounded-lg mb-2 max-w-[80%]';
-  const typeStyles = {
-    user: 'bg-blue-500 text-white self-end ml-auto',
-    assistant: 'bg-gray-200 text-black self-start',
-    system: 'bg-green-100 text-green-800 text-center'
-  };
-
-  return (
-    <div className={`${baseStyles} ${typeStyles[type]}`}>
-      {message}
-    </div>
-  );
-};
-
-// Main Chat Interface
-const App = () => {
-  const [messages, setMessages] = useState([]);
-  const [inputMessage, setInputMessage] = useState('');
-  const [data, setData] = useState();
-
-  const sendMessage = async () => {
-    if (!inputMessage.trim()) return;
-
-    // Add user message
-    const newMessages = [
-      ...messages, 
-      { type: 'user', message: inputMessage }
-    ];
+  useEffect(() => {
+    fetchMenuItems();
+    fetchOrders();
+    console.log(process.env.REACT_APP_API_URL);
     
-    setMessages(newMessages);
-    setInputMessage('');
+  }, []);
 
-    try {
-      // Call backend API to get AI response
-      const response = await axios.post('https://growthpartners-backend.onrender.com/api/chat', { 
-        message: newMessages,
-        financialContext: data.data
-      });
+  const fetchMenuItems = async () => {
+    const response = await fetch(`${process.env.REACT_APP_API_URL}/api/menu-items`);
+    const data = await response.json();
+    setMenuItems(data);
+  };
 
-      // Add AI response
-      setMessages(prevMessages => [
-        ...prevMessages, 
-        { type: 'assistant', message: response.data.reply }
-      ]);
-    } catch (error) {
-      console.error('Chat error', error);
-      setMessages(prevMessages => [
-        ...prevMessages, 
-        { type: 'system', message: 'Error processing request' }
-      ]);
-    }
-  }
+  const fetchOrders = async () => {
+    const response = await fetch(`${process.env.REACT_APP_API_URL}/api/orders`);
+    const data = await response.json();
+    setOrders(data);
+  };
+
+  const handleAddMenuItem = async (e) => {
+    e.preventDefault();
+    const formData = new FormData();
+    formData.append('name', newItem.name);
+    formData.append('description', newItem.description);
+    formData.append('price', newItem.price);
+    
+    await fetch(`${process.env.REACT_APP_API_URL}/api/menu-items`, {
+      method: 'POST',
+      body: formData
+    });
+
+    fetchMenuItems();
+    // Reset form
+    setNewItem({ name: '', description: '', price: '' });
+  };
+
+  const updateOrderStatus = async (orderId, status) => {
+    await fetch(`${process.env.REACT_APP_API_URL}/api/orders/${orderId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status })
+    });
+    fetchOrders();
+  };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-100">
-      <div className="flex-grow overflow-y-auto p-4 space-y-2">
-        {messages.map((msg, index) => (
-          <MessageBubble 
-            key={index} 
-            message={msg.message} 
-            type={msg.type} 
+    <div className="p-4">
+      <h1 className="text-2xl font-bold mb-4">Admin Dashboard</h1>
+      
+      {/* Add Menu Item Form */}
+      <div className="mb-8">
+        <h2 className="text-xl font-semibold mb-2">Add Menu Item</h2>
+        <form onSubmit={handleAddMenuItem} className="space-y-2">
+          <input 
+            type="text" 
+            placeholder="Name" 
+            value={newItem.name}
+            onChange={(e) => setNewItem({...newItem, name: e.target.value})}
+            className="w-full p-2 border rounded"
+            required 
           />
+          <textarea 
+            placeholder="Description"
+            value={newItem.description}
+            onChange={(e) => setNewItem({...newItem, description: e.target.value})}
+            className="w-full p-2 border rounded"
+            required
+          />
+          <input 
+            type="number" 
+            placeholder="Price" 
+            value={newItem.price}
+            onChange={(e) => setNewItem({...newItem, price: e.target.value})}
+            className="w-full p-2 border rounded"
+            step="0.01"
+            required 
+          />
+          <button 
+            type="submit" 
+            className="bg-blue-500 text-white p-2 rounded"
+          >
+            Add Item
+          </button>
+        </form>
+      </div>
+
+      {/* Menu Items List */}
+      <div className="mb-8">
+        <h2 className="text-xl font-semibold mb-2">Current Menu Items</h2>
+        <div className="grid grid-cols-3 gap-4">
+          {menuItems.map(item => (
+            <div key={item._id} className="border p-4 rounded">
+              <h3 className="font-bold">{item.name}</h3>
+              <p>{item.description}</p>
+              <p className="font-semibold">${item.price.toFixed(2)}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Orders List */}
+      <div>
+        <h2 className="text-xl font-semibold mb-2">Current Orders</h2>
+        {orders.map(order => (
+          <div key={order._id} className="border p-4 rounded mb-4">
+            <div className="flex justify-between items-center">
+              <div>
+                {order.items.map(item => (
+                  <div key={item._id}>
+                    {item.menuItem.name} x {item.quantity}
+                  </div>
+                ))}
+                <p className="font-bold">Total: ${order.totalPrice.toFixed(2)}</p>
+              </div>
+              <div>
+                <select 
+                  value={order.status}
+                  onChange={(e) => updateOrderStatus(order._id, e.target.value)}
+                  className="border p-2 rounded"
+                >
+                  <option value="Pending">Pending</option>
+                  <option value="Preparing">Preparing</option>
+                  <option value="Ready">Ready</option>
+                  <option value="Completed">Completed</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// Customer Menu Component
+const CustomerMenu = () => {
+  const [menuItems, setMenuItems] = useState([]);
+  const [cart, setCart] = useState([]);
+
+  useEffect(() => {
+    fetchMenuItems();
+  }, []);
+
+  const fetchMenuItems = async () => {
+    const response = await fetch(`${process.env.REACT_APP_API_URL}/api/menu-items`);
+    const data = await response.json();
+    setMenuItems(data);
+  };
+
+  const addToCart = (item) => {
+    const existingItem = cart.find(cartItem => cartItem.menuItemId === item._id);
+    if (existingItem) {
+      setCart(cart.map(cartItem => 
+        cartItem.menuItemId === item._id 
+          ? {...cartItem, quantity: cartItem.quantity + 1} 
+          : cartItem
+      ));
+    } else {
+      setCart([...cart, { menuItemId: item._id, quantity: 1, name: item.name, price: item.price }]);
+    }
+  };
+
+  const placeOrder = async () => {
+    try {
+      await fetch(`${process.env.REACT_APP_API_URL}/api/orders`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: cart.map(item => ({ 
+          menuItemId: item.menuItemId, 
+          quantity: item.quantity 
+        })) })
+      });
+      setCart([]);
+      alert('Order placed successfully!');
+    } catch (error) {
+      alert('Failed to place order');
+    }
+  };
+
+  return (
+    <div className="p-4">
+      <h1 className="text-2xl font-bold mb-4">Menu</h1>
+      <div className="grid grid-cols-3 gap-4 mb-8">
+        {menuItems.map(item => (
+          <div key={item._id} className="border p-4 rounded">
+            <h3 className="font-bold">{item.name}</h3>
+            <p>{item.description}</p>
+            <p className="font-semibold">${item.price.toFixed(2)}</p>
+            <button 
+              onClick={() => addToCart(item)}
+              className="mt-2 bg-green-500 text-white p-2 rounded"
+            >
+              Add to Cart
+            </button>
+          </div>
         ))}
       </div>
 
-      {/* <FileUploader onFileUpload={(data) => {
-        setMessages(prev => [
-          ...prev, 
-          { type: 'system', message: 'File uploaded successfully' }
-        ]);
-      }} /> */}
-
-       <FileUploader onFileUpload={setData}/>
-
-      <div className="p-4 bg-white border-t flex">
-        <input 
-          type="text" 
-          value={inputMessage}
-          onChange={(e) => setInputMessage(e.target.value)}
-          onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-          placeholder="Ask a financial question..."
-          className="flex-grow p-2 border rounded-l"
-        />
-        <button 
-          onClick={sendMessage}
-          className="bg-blue-500 text-white px-4 py-2 rounded-r"
-        >
-          Send
-        </button>
-        <button onClick={() => console.log(data)} >debug</button>
-      </div>
+      {cart.length > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white p-4 shadow-lg">
+          <h2 className="text-xl font-semibold">Cart</h2>
+          {cart.map(item => (
+            <div key={item.menuItemId} className="flex justify-between">
+              <span>{item.name} x {item.quantity}</span>
+              <span>${(item.price * item.quantity).toFixed(2)}</span>
+            </div>
+          ))}
+          <div className="font-bold">
+            Total: ${cart.reduce((total, item) => total + item.price * item.quantity, 0).toFixed(2)}
+          </div>
+          <button 
+            onClick={placeOrder}
+            className="mt-2 bg-blue-500 text-white p-2 rounded w-full"
+          >
+            Place Order
+          </button>
+        </div>
+      )}
     </div>
+  );
+};
+
+// QR Code Display Component
+const QRCodeDisplay = () => {
+  // const menuUrl = `${window.location.origin}/menu`;
+
+  return (
+    <div className="flex flex-col items-center justify-center h-screen">
+      <h1 className="text-2xl mb-4">Scan to View Menu</h1>
+      {/* <QRCode value={menuUrl} size={256} /> */}
+      <QRCodeSVG value="https://byproduct-backend.onrender.com/menu" size={256}/>
+      <p className="mt-4">Scan this QR code to access the restaurant menu</p>
+    </div>
+  );
+};
+
+// Main App Component with Routing
+const App = () => {
+  return (
+    <Router>
+      <div>
+        <nav className="bg-gray-800 p-4">
+          <div className="container mx-auto flex justify-between items-center">
+            <Link to="/" className="text-white text-xl font-bold">Restaurant App</Link>
+            <div>
+              <Link to="/admin" className="text-white mr-4">Admin</Link>
+              <Link to="/qr" className="text-white">QR Code</Link>
+            </div>
+          </div>
+        </nav>
+
+        <Routes>
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/menu" element={<CustomerMenu />} />
+          <Route path="/qr" element={<QRCodeDisplay />} />
+        </Routes>
+
+      <QRCodeDisplay/>
+      </div>
+    </Router>
   );
 };
 
 export default App;
-
-// import React, { useState } from "react";
-// import axios from "axios";
-// import * as XLSX from "xlsx";
-// import "./App.css";
-
-// function App() {
-//   const [input, setInput] = useState("");
-//   const [messages, setMessages] = useState([]);
-//   const [loading, setLoading] = useState(false);
-//   const [uploadedData, setUploadedData] = useState(null);
-
-//   const handleFileUpload = (event) => {
-//     const file = event.target.files[0];
-//     if (file) {
-//       const reader = new FileReader();
-//       reader.onload = (e) => {
-//         try {
-//           const data = new Uint8Array(e.target.result);
-//           const workbook = XLSX.read(data, { type: "array" });
-//           const jsonResult = {};
-  
-//           workbook.SheetNames.forEach((sheetName) => {
-//             // Log the raw sheet data to inspect
-//             console.log("Raw Sheet Data:", workbook.Sheets[sheetName]);
-  
-//             const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {
-//               header: 1, // Use first row as headers
-//               defval: '', // Default value for empty cells
-//               blankrows: false // Skip empty rows
-//             });
-  
-//             console.log("Converted Sheet Data:", sheetData);
-//             jsonResult[sheetName] = sheetData;
-//           });
-  
-//           setUploadedData(jsonResult);
-//           alert(`File converted successfully!`);
-//         } catch (error) {
-//           console.error("Conversion Error:", error);
-//           alert("Failed to convert file.");
-//         }
-//       };
-//       reader.readAsArrayBuffer(file);
-//     }
-//   };
-
-//   const sendMessage = async () => {
-//     if (!input.trim() || !uploadedData) {
-//       alert("Please enter a question and upload a file!");
-//       return;
-//     }
-
-//     const userMessage = { role: "user", content: input };
-//     setMessages((prev) => [...prev, userMessage]);
-//     setInput("");
-//     setLoading(true);
-
-//     try {
-//       const response = await axios.post("http://localhost:3500/ask", {
-//         message: input,
-//         data: uploadedData,
-//       });
-
-//       console.log("response", response);
-
-//       const assistantMessage = {
-//         role: "assistant",
-//         content: response.data.choices[0].message.content,
-//       };
-
-//       setMessages((prev) => [...prev, assistantMessage]);
-//     } catch (error) {
-//       console.error(error);
-//     }
-
-//     setLoading(false);
-//   };
-
-//   return (
-//     <div className="App">
-//       <h1>Financial Chat Assistant</h1>
-//       <div className="file-upload">
-//         <label htmlFor="fileInput">Upload your financial file:</label>
-//         <input type="file" id="fileInput" onChange={handleFileUpload} />
-//       </div>
-//       <div className="chat-container">
-//         {messages.map((msg, idx) => (
-//           <div
-//             key={idx}
-//             className={`message ${msg.role === "user" ? "user" : "assistant"}`}
-//           >
-//             {msg.content}
-//           </div>
-//         ))}
-//         {loading && <div className="message assistant">Typing...</div>}
-//       </div>
-//       <div className="input-container">
-//         <input
-//           type="text"
-//           value={input}
-//           onChange={(e) => setInput(e.target.value)}
-//           placeholder="Ask your financial questions..."
-//         />
-//         <button onClick={sendMessage}>Send</button>
-//       </div>
-//     </div>
-//   );
-// }
-
-// export default App;
