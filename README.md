@@ -1,7 +1,7 @@
 # Frontend
 
 ### Deployed Website
-The project is deployed and accessible at: [Deployed Website URL]([https://your-deployed-site.com](https://chatapptaskopenai.netlify.app))
+The project is deployed and accessible at: https://menuappdev.netlify.app
 
 ---
 
@@ -16,7 +16,7 @@ Before running the project locally, ensure you have the following installed on y
 
 1. **Clone the repository**:
    ```bash
-   git clone [https://github.com/your-username/your-repo.git](https://github.com/prajesh9921/growthpartners_frontend.git)
+   git clone https://github.com/prajesh9921/Byproduct_frontend.git
 2. cd your-repo.
 3. Install dependencies
    ```bash
